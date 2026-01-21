@@ -142,7 +142,6 @@ build_kernel() {
     # ثابت: defconfig الخاص بـ a73xq
     export DEFCONF="a73xq_defconfig"
     COMREV="$(git rev-parse --verify HEAD --short 2>/dev/null || echo 'nogit')"
-    #export LOCALVERSION="-NovaKernel-KSU-$BRANCH-$KMI_GENERATION-$COMREV-$device"
 
     mkdir -p "$OUT_DIR"
 
