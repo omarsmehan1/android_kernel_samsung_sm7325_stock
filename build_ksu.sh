@@ -138,7 +138,18 @@ build_kernel() {
     export ABI_DEFINITION=android/abi_gki_aarch64.xml
     export KMI_SYMBOL_LIST=android/abi_gki_aarch64
     export ADDITIONAL_KMI_SYMBOL_LISTS="android/abi_gki_aarch64_cuttlefish android/abi_gki_aarch64_db845c android/abi_gki_aarch64_exynos android/abi_gki_aarch64_exynosauto android/abi_gki_aarch64_fcnt android/abi_gki_aarch64_galaxy android/abi_gki_aarch64_goldfish android/abi_gki_aarch64_hikey960 android/abi_gki_aarch64_imx android/abi_gki_aarch64_oneplus android/abi_gki_aarch64_microsoft android/abi_gki_aarch64_oplus android/abi_gki_aarch64_qcom android/abi_gki_aarch64_sony android/abi_gki_aarch64_sonywalkman android/abi_gki_aarch64_sunxi android/abi_gki_aarch64_trimble android/abi_gki_aarch64_unisoc android/abi_gki_aarch64_vivo android/abi_gki_aarch64_xiaomi android/abi_gki_aarch64_zebra"
-
+# --- Toolchain ---
+export CC=clang
+export CXX=clang++
+export LD=ld.lld
+export AR=llvm-ar
+export NM=llvm-nm
+export STRIP=llvm-strip
+export OBJCOPY=llvm-objcopy
+export OBJDUMP=llvm-objdump
+export READELF=llvm-readelf
+export LLVM=1
+export LLVM_IAS=1
     # ثابت: defconfig الخاص بـ a73xq
     export DEFCONF="a73xq_defconfig"
     COMREV="$(git rev-parse --verify HEAD --short 2>/dev/null || echo 'nogit')"
