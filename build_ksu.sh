@@ -53,8 +53,20 @@ install_deps() {
     display_target_banner "$device"
     echo -e "${BLUE}===> Installing System Dependencies...${NC}"
     sudo apt update
-    sudo apt install -y git curl zip wget make gcc g++ bc libssl-dev aria2 aria2-bin tar
+    sudo apt install -y \
+        git \
+        curl \
+        zip \
+        wget \
+        make \
+        gcc \
+        g++ \
+        bc \
+        libssl-dev \
+        aria2 \
+        tar
     echo -e "${GREEN}✔ Dependencies installed.${NC}"
+
 }
 
 # --- 🛠️ 2. تحميل الأدوات (دعم الكاش + Shallow Clone) ---
