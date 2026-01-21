@@ -1,50 +1,43 @@
-name: 🚀 NovaKernel KSU Build
+name: "🚀 NovaKernel KSU Build"
 
-# سيظهر اسم العملية في القائمة كـ: Build NovaKernel for a52sxq 📱
-run-name: Build NovaKernel for ${{ inputs.device }} 📱
+# يظهر اسم التشغيل ثابتًا لجهاز a73xq
+run-name: "Build NovaKernel for a73xq 📱"
 
 on:
-  workflow_dispatch:
-    inputs:
-      device:
-        description: 'Target Device'
-        required: true
-        default: 'a73xq'
-        type: choice
-        options: [a73xq, a52sxq, m52xq]
+  workflow_dispatch: {}
 
 jobs:
   build:
-    # سيظهر اسم المرحلة في القائمة الجانبية كـ: Build for a52sxq
-    name: Build for ${{ github.event.inputs.device }}
+    name: "Build for a73xq"
     runs-on: ubuntu-latest
-    
+
     steps:
-      - name: 📥 Cloning Source
+      - name: "📥 Clone repository"
         uses: actions/checkout@v4
         with:
           fetch-depth: 1
 
-      - name: 📦 Preparing Environment
-        run: |
-          chmod +x build_ksu.sh
-          ./build_ksu.sh deps ${{ github.event.inputs.device }}
+      - name: "Set up permissions for build script"
+        run: chmod +x build_ksu.sh
 
-      - name: 🛠️ Fetching Toolchain
+      - name: "📦 Install dependencies and prepare environment (a73xq)"
+        run: ./build_ksu.sh deps a73xq
+
+      - name: "🛠️ Fetch toolchain and AnyKernel3"
         run: ./build_ksu.sh tools
 
-      - name: 🧬 Integrating KernelSU & SUSFS
+      - name: "🧬 Integrate KernelSU & SUSFS"
         run: ./build_ksu.sh ksu
 
-      - name: 🏗️ Compiling NovaKernel
-        run: ./build_ksu.sh build ${{ github.event.inputs.device }}
+      - name: "🏗️ Compile NovaKernel (a73xq)"
+        run: ./build_ksu.sh build a73xq
 
-      - name: 🎁 Finalizing Package
-        run: ./build_ksu.sh pack ${{ github.event.inputs.device }}
+      - name: "🎁 Package into AnyKernel3"
+        run: ./build_ksu.sh pack
 
-      - name: 📤 Uploading Artifact
+      - name: "📤 Upload packaged artifact"
         uses: actions/upload-artifact@v4
         with:
-          name: NovaKernel-${{ github.event.inputs.device }}-KSU-${{ github.run_id }}
-          path: ~/toolchains/RIO/work_ksu/*
+          name: "NovaKernel-a73xq-KSU-${{ github.run_id }}"
+          path: ${{ github.workspace }}/toolchains/RIO/work_ksu/*
           compression-level: 9
