@@ -82,7 +82,7 @@ fetch_tools() {
         echo -e "${YELLOW}-> Toolchain not found, downloading Clang 11.0.2...${NC}"
         mkdir -p "$CLANG_DIR"
         aria2c -x16 -s16 -k1M \
-            "https://android.googlesource.com/toolchain/llvm-project/+archive/b397f81060ce6d701042b782172ed13bee898b79/clang-r383902b1-11.0.2.tar.gz" \
+            "https://android.googlesource.com/toolchain/llvm-project/+archive/b397f81060ce6d701042b782172ed13bee898b79.tar.gz" \
             -d "$TC_DIR" -o "clang-11.0.2.tar.gz"
         tar -xf "$TC_DIR/clang-11.0.2.tar.gz" -C "$CLANG_DIR" --strip-components=0 || true
         rm -f "$TC_DIR/clang-11.0.2.tar.gz"
