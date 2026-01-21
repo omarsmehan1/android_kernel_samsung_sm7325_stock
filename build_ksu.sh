@@ -18,15 +18,15 @@ OUT_DIR="$SRC_DIR/out"
 TC_DIR="$HOME/toolchains"
 JOBS="$(nproc 2>/dev/null || echo 1)"
 
-# Toolchain path (cached)
-CLANG_DIR="$TC_DIR/clang-r530567"
+# Toolchain path (Clang 11.0.2)
+CLANG_DIR="$TC_DIR/clang-11.0.2"
 export PATH="$CLANG_DIR/bin:$PATH"
 
-# --- ✨ البانر المطور: GALAXY Professional Edition ---
+# --- ✨ البانر ---
 display_target_banner() {
     local device_full_name=""
     case "$1" in
-        a73xq)  device_full_name="SAMSUNG GALAXY A73 5G";;
+        a73xq) device_full_name="SAMSUNG GALAXY A73 5G";;
         *) device_full_name="UNKNOWN DEVICE";;
     esac
 
@@ -42,7 +42,7 @@ display_target_banner() {
     echo -e "${WHITE}  📱 DEVICE   :${NC} ${GREEN}$device_full_name${NC}"
     echo -e "${WHITE}  🆔 VARIANT  :${NC} ${YELLOW}$1${NC}"
     echo -e "${WHITE}  📅 DATE     :${NC} ${CYAN}$(date "+%Y-%m-%d %H:%M:%S")${NC}"
-    echo -e "${WHITE}  🛠️ COMPILER :${NC} ${PURPLE}Clang r530567${NC}"
+    echo -e "${WHITE}  🛠️ COMPILER :${NC} ${PURPLE}Clang 11.0.2${NC}"
     echo -e "${CYAN}------------------------------------------------------------${NC}"
     echo ""
 }
@@ -51,8 +51,11 @@ display_target_banner() {
 install_deps() {
     local device="$1"
     display_target_banner "$device"
-    echo -e "${BLUE}===> Installing System Dependencies...${NC}"
+
+    echo -e "${BLUE}===> Updating package lists...${NC}"
     sudo apt update
+
+    echo -e "${BLUE}===> Installing System Dependencies...${NC}"
     sudo apt install -y \
         git \
         curl \
@@ -64,22 +67,26 @@ install_deps() {
         bc \
         libssl-dev \
         aria2 \
-        tar
-    echo -e "${GREEN}✔ Dependencies installed.${NC}"
+        tar \
+        bison \
+        flex \
+        libelf-dev
 
+    echo -e "${GREEN}✔ Dependencies installed.${NC}"
 }
 
-# --- 🛠️ 2. تحميل الأدوات (دعم الكاش + Shallow Clone) ---
+# --- 🛠️ 2. تحميل الأدوات (Clang 11.0.2 + AnyKernel3) ---
 fetch_tools() {
     echo -e "${BLUE}===> Checking Toolchain...${NC}"
     if [[ ! -d "$CLANG_DIR/bin" ]]; then
-        echo -e "${YELLOW}-> Toolchain not found, downloading...${NC}"
+        echo -e "${YELLOW}-> Toolchain not found, downloading Clang 11.0.2...${NC}"
         mkdir -p "$CLANG_DIR"
-        aria2c -x16 -s16 -k1M "https://android.googlesource.com/platform/prebuilts/clang/host/linux-x86/+archive/refs/heads/main/clang-r530567.tar.gz" \
-               -d "$TC_DIR" -o "clang-r530567.tar.gz"
-        tar -xf "$TC_DIR/clang-r530567.tar.gz" -C "$TC_DIR/clang-r530567" --strip-components=0 || true
-        rm -f "$TC_DIR/clang-r530567.tar.gz"
-        echo -e "${GREEN}✔ Toolchain downloaded and extracted.${NC}"
+        aria2c -x16 -s16 -k1M \
+            "https://android.googlesource.com/toolchain/llvm-project/+archive/b397f81060ce6d701042b782172ed13bee898b79/clang-r383902b1-11.0.2.tar.gz" \
+            -d "$TC_DIR" -o "clang-11.0.2.tar.gz"
+        tar -xf "$TC_DIR/clang-11.0.2.tar.gz" -C "$CLANG_DIR" --strip-components=0 || true
+        rm -f "$TC_DIR/clang-11.0.2.tar.gz"
+        echo -e "${GREEN}✔ Clang 11.0.2 downloaded and extracted.${NC}"
     else
         echo -e "${GREEN}✔ Toolchain found (cache).${NC}"
     fi
@@ -93,7 +100,8 @@ fetch_tools() {
 # --- 🧬 3. إعداد KernelSU ---
 setup_ksu() {
     echo -e "${BLUE}===> Integrating KernelSU & SUSFS...${NC}"
-    # تأكد إننا على الفرع الرئيسي لدليل المصدر
+
+    # تأكد إننا على الفرع الرئيسي لدليل المصدر إن كان داخل git repo
     if git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
         git switch main >/dev/null 2>&1 || git checkout main >/dev/null 2>&1 || true
     fi
@@ -101,8 +109,7 @@ setup_ksu() {
     # ازالة مجلدات سابقة (إن وُجدت)
     rm -rf "$SRC_DIR/KernelSU" "$SRC_DIR/drivers/kernelsu" || true
 
-    # تنفيذ سكربت الإعداد من المستودع الرسمي (المستخدم سابقًا)
-    # ملاحظة: هذا يقوم بجلب سكربت خارجي عبر curl وتنفذه؛ هذا السلوك مطابق لما كان موجودًا.
+    # تنفيذ سكربت الإعداد الرسمي (مأخوذ من KernelSU-Next)
     curl -LSs "https://raw.githubusercontent.com/KernelSU-Next/KernelSU-Next/next/kernel/setup.sh" | bash -s v1.1.1
     echo -e "${GREEN}✔ KernelSU & SUSFS integrated (if setup succeeded).${NC}"
 }
@@ -124,7 +131,6 @@ build_kernel() {
     # --- كافة الـ Exports المطلوبة (ثابتة لجهاز a73xq) ---
     export ARCH=arm64
     export BRANCH="android11"
-    export LLVM=1
     export DEPMOD=depmod
     export KCFLAGS="${KCFLAGS:-} -D__ANDROID_COMMON_KERNEL__"
     export KMI_GENERATION=2
@@ -137,28 +143,33 @@ build_kernel() {
     export KMI_SYMBOL_LIST_ADD_ONLY=1
     export ABI_DEFINITION=android/abi_gki_aarch64.xml
     export KMI_SYMBOL_LIST=android/abi_gki_aarch64
-    export ADDITIONAL_KMI_SYMBOL_LISTS="android/abi_gki_aarch64_cuttlefish android/abi_gki_aarch64_db845c android/abi_gki_aarch64_exynos android/abi_gki_aarch64_exynosauto android/abi_gki_aarch64_fcnt android/abi_gki_aarch64_galaxy android/abi_gki_aarch64_goldfish android/abi_gki_aarch64_hikey960 android/abi_gki_aarch64_imx android/abi_gki_aarch64_oneplus android/abi_gki_aarch64_microsoft android/abi_gki_aarch64_oplus android/abi_gki_aarch64_qcom android/abi_gki_aarch64_sony android/abi_gki_aarch64_sonywalkman android/abi_gki_aarch64_sunxi android/abi_gki_aarch64_trimble android/abi_gki_aarch64_unisoc android/abi_gki_aarch64_vivo android/abi_gki_aarch64_xiaomi android/abi_gki_aarch64_zebra"
-# --- Toolchain ---
-export CC=clang
-export CXX=clang++
-export LD=ld.lld
-export AR=llvm-ar
-export NM=llvm-nm
-export STRIP=llvm-strip
-export OBJCOPY=llvm-objcopy
-export OBJDUMP=llvm-objdump
-export READELF=llvm-readelf
-export LLVM=1
-export LLVM_IAS=1
-    # ثابت: defconfig الخاص بـ a73xq
+
+    # --- Force usage of Clang 11 tools ---
+    export CC=clang
+    export CXX=clang++
+    export LD=ld.lld
+    export AR=llvm-ar
+    export NM=llvm-nm
+    export STRIP=llvm-strip
+    export OBJCOPY=llvm-objcopy
+    export OBJDUMP=llvm-objdump
+    export READELF=llvm-readelf
+    export LLVM=1
+    export LLVM_IAS=1
+
+    # تأكد أن PATH يحتوي bin الخاص بالتول تشين
+    export PATH="$CLANG_DIR/bin:$PATH"
+
+    # DEFCONFIG ثابت لجهاز a73xq
     export DEFCONF="a73xq_defconfig"
-    COMREV="$(git rev-parse --verify HEAD --short 2>/dev/null || echo 'nogit')"
 
     mkdir -p "$OUT_DIR"
 
+    # منع مشكلة HDRINST عبر تحديد مسار تثبيت الهيدرز
+    export INSTALL_HDR_PATH="$OUT_DIR/usr"
+
     START=$(date +%s)
 
-    # تنفيذ خطوتي التجهيز والبناء
     echo -e "${BLUE}--> Running make $DEFCONF${NC}"
     make -j"$JOBS" -C "$SRC_DIR" O="$OUT_DIR" "$DEFCONF"
 
@@ -190,7 +201,7 @@ gen_anykernel() {
         cp "$OUT_DIR/arch/arm64/boot/dtbo.img" "$AK3_DIR/"
     fi
 
-    # مثال نقل DTB إن وُجد (ليُعدّل حسب جهازك)
+    # مثال نقل DTB إن وُجد
     if [[ -f "$OUT_DIR/arch/arm64/boot/dts/vendor/qcom/yupik.dtb" ]]; then
         mkdir -p "$AK3_DIR/dtb"
         cp "$OUT_DIR/arch/arm64/boot/dts/vendor/qcom/yupik.dtb" "$AK3_DIR/dtb/"
