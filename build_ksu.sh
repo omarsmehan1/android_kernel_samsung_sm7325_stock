@@ -145,17 +145,6 @@ build_kernel() {
     export KMI_SYMBOL_LIST=android/abi_gki_aarch64
 
     # --- Force usage of Clang 11 tools ---
-    export CC=clang
-    export CXX=clang++
-    export LD=ld.lld
-    export AR=llvm-ar
-    export NM=llvm-nm
-    export STRIP=llvm-strip
-    export OBJCOPY=llvm-objcopy
-    export OBJDUMP=llvm-objdump
-    export READELF=llvm-readelf
-    export LLVM=1
-    export LLVM_IAS=1
 
     # تأكد أن PATH يحتوي bin الخاص بالتول تشين
     export PATH="$CLANG_DIR/bin:$PATH"
@@ -165,11 +154,9 @@ build_kernel() {
 
     mkdir -p "$OUT_DIR"
 
-    # منع مشكلة HDRINST عبر تحديد مسار تثبيت الهيدرز
-    export INSTALL_HDR_PATH="$OUT_DIR/usr"
-
     START=$(date +%s)
-
+    export ARCH=arm64
+    export LLVM=1
     echo -e "${BLUE}--> Running make $DEFCONF${NC}"
     make -j"$JOBS" -C "$SRC_DIR" O="$OUT_DIR" "$DEFCONF"
 
